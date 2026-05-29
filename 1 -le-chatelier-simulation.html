@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Le Chatelier Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6 font-sans">
+
+<div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <div class="bg-white rounded-3xl shadow-xl p-6 space-y-6">
+    <h1 class="text-3xl font-bold text-slate-800">
+      Προσομοίωση Le Chatelier
+    </h1>
+
+    <div class="bg-slate-50 p-4 rounded-2xl text-sm leading-relaxed">
+      <div class="font-semibold mb-2">Χρωματική Ισορροπία:</div>
+      <div>
+        [Co(H₂O)₆]²⁺ + 4Cl⁻ ⇌ [CoCl₄]²⁻ + 6H₂O
+      </div>
+    </div>
+
+    <div>
+      <label class="font-medium block mb-2">Συγκέντρωση Cl⁻</label>
+      <input id="chloride" type="range" min="0" max="1" step="0.01" value="0.5" class="w-full">
+      <div id="chlorideValue" class="text-sm mt-1">0.50 M</div>
+    </div>
+
+    <div>
+      <label class="font-medium block mb-2">Θερμοκρασία</label>
+      <input id="temperature" type="range" min="0" max="100" step="1" value="25" class="w-full">
+      <div id="temperatureValue" class="text-sm mt-1">25 °C</div>
+    </div>
+
+    <div>
+      <label class="font-medium block mb-2">Προσθήκη Νερού</label>
+      <input id="water" type="range" min="0" max="1" step="0.01" value="0.5" class="w-full">
+      <div id="waterValue" class="text-sm mt-1">0.50</div>
+    </div>
+
+    <div class="bg-blue-50 rounded-2xl p-4">
+      <div class="font-semibold mb-2">Μετατόπιση Ισορροπίας</div>
+      <div id="direction" class="text-xl font-bold">⇌ Ισορροπία</div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-3xl shadow-xl p-6 flex flex-col items-center justify-center">
+    <h2 class="text-2xl font-bold mb-6 text-slate-800">
+      Διάλυμα
+    </h2>
+
+    <div id="solution"
+      class="w-72 h-72 rounded-full border-8 border-slate-300 shadow-inner transition-all duration-500">
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mt-8 w-full">
+      <div class="bg-pink-100 rounded-2xl p-4 text-center">
+        <div class="font-bold text-lg">Ροζ Σύμπλοκο</div>
+        <div id="pinkValue" class="text-2xl mt-2">0.50</div>
+        <div class="text-sm mt-1">[Co(H₂O)₆]²⁺</div>
+      </div>
+
+      <div class="bg-blue-100 rounded-2xl p-4 text-center">
+        <div class="font-bold text-lg">Μπλε Σύμπλοκο</div>
+        <div id="blueValue" class="text-2xl mt-2">0.50</div>
+        <div class="text-sm mt-1">[CoCl₄]²⁻</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+
+    <div class="bg-white rounded-3xl shadow-xl p-6">
+      <h2 class="text-2xl font-bold mb-4 text-slate-800">
+        Γράφημα Συγκεντρώσεων
+      </h2>
+
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-xl p-6">
+      <h2 class="text-2xl font-bold mb-4 text-slate-800">
+        Ενεργειακό Διάγραμμα
+      </h2>
+
+      <svg width="100%" height="220" viewBox="0 0 400 220">
+        <path
+          d="M 40 170 Q 200 30 360 90"
+          stroke="#2563eb"
+          stroke-width="6"
+          fill="none"
+        />
+
+        <line x1="40" y1="170" x2="120" y2="170" stroke="black" stroke-width="3" />
+        <line x1="280" y1="90" x2="360" y2="90" stroke="black" stroke-width="3" />
+
+        <text x="20" y="190" font-size="16">Αντιδρώντα</text>
+        <text x="285" y="80" font-size="16">Προϊόντα</text>
+        <text x="155" y="35" font-size="18" fill="#dc2626">Ea</text>
+      </svg>
+
+      <div class="mt-4 text-sm text-slate-700 leading-relaxed">
+        Η αύξηση θερμοκρασίας ευνοεί την ενδόθερμη κατεύθυνση της ισορροπίας.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const chloride = document.getElementById('chloride');
+  const temperature = document.getElementById('temperature');
+  const water = document.getElementById('water');
+
+  const chlorideValue = document.getElementById('chlorideValue');
+  const temperatureValue = document.getElementById('temperatureValue');
+  const waterValue = document.getElementById('waterValue');
+
+  const solution = document.getElementById('solution');
+  const pinkValue = document.getElementById('pinkValue');
+  const blueValue = document.getElementById('blueValue');
+  const direction = document.getElementById('direction');
+
+  const ctx = document.getElementById('chart').getContext('2d');
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['0','1','2','3','4'],
+      datasets: [
+        {
+          label: '[Co(H₂O)₆]²⁺',
+          data: [0.5,0.5,0.5,0.5,0.5],
+          borderColor: 'rgb(236,72,153)',
+          tension: 0.4
+        },
+        {
+          label: '[CoCl₄]²⁻',
+          data: [0.5,0.5,0.5,0.5,0.5],
+          borderColor: 'rgb(37,99,235)',
+          tension: 0.4
+        }
+      ]
+    }
+  });
+
+  function updateSimulation() {
+    const cl = parseFloat(chloride.value);
+    const temp = parseFloat(temperature.value);
+    const wat = parseFloat(water.value);
+
+    chlorideValue.textContent = cl.toFixed(2) + ' M';
+    temperatureValue.textContent = temp + ' °C';
+    waterValue.textContent = wat.toFixed(2);
+
+    let equilibrium = 0.5;
+
+    equilibrium += cl * 0.7;
+    equilibrium += ((temp - 25) / 75) * 0.5;
+    equilibrium -= wat * 0.6;
+
+    equilibrium = Math.max(0, Math.min(1, equilibrium));
+
+    const pink = (1 - equilibrium).toFixed(2);
+    const blue = equilibrium.toFixed(2);
+
+    pinkValue.textContent = pink;
+    blueValue.textContent = blue;
+
+    const r = 255 - equilibrium * 180;
+    const g = 180 - equilibrium * 80;
+
+    solution.style.backgroundColor = `rgb(${r}, ${g}, 255)`;
+
+    if (equilibrium > 0.55) {
+      direction.textContent = '→ Προς τα προϊόντα';
+    } else if (equilibrium < 0.45) {
+      direction.textContent = '← Προς τα αντιδρώντα';
+    } else {
+      direction.textContent = '⇌ Ισορροπία';
+    }
+
+    chart.data.datasets[0].data = [0.5, 0.45, 0.4, pink, pink];
+    chart.data.datasets[1].data = [0.5, 0.55, 0.6, blue, blue];
+    chart.update();
+  }
+
+  chloride.addEventListener('input', updateSimulation);
+  temperature.addEventListener('input', updateSimulation);
+  water.addEventListener('input', updateSimulation);
+
+  updateSimulation();
+</script>
+
+</body>
+</html>
